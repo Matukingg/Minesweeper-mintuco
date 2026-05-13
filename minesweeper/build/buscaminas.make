@@ -68,6 +68,7 @@ OBJECTS := \
 	$(OBJDIR)/core.o \
 	$(OBJDIR)/bitmaps.o \
 	$(OBJDIR)/map.o \
+	$(OBJDIR)/input.o \
 	$(OBJDIR)/graphicMgr.o \
 
 RESOURCES := \
@@ -139,6 +140,9 @@ $(OBJDIR)/bitmaps.o: ../src/tiles/bitmaps.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/map.o: ../src/utils/map.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/input.o: ../src/input/input.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/graphicMgr.o: ../src/graphics/graphicMgr.cpp

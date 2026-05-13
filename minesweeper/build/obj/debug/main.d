@@ -1,5 +1,8 @@
-obj/debug/main.o: ../src/main.cpp ../src/utils/map.hpp \
- ../src/tiles/bitmaps.hpp ../src/core/core.hpp
+obj/debug/main.o: ../src/main.cpp ../src/core/core.hpp \
+ ../src/utils/map.hpp ../src/tiles/bitmaps.hpp \
+ ../src/graphics/graphicMgr.hpp ../src/input/input.hpp
+../src/core/core.hpp:
 ../src/utils/map.hpp:
 ../src/tiles/bitmaps.hpp:
-../src/core/core.hpp:
+../src/graphics/graphicMgr.hpp:
+../src/input/input.hpp:
