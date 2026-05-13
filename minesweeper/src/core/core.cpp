@@ -46,7 +46,8 @@ std::string Core::get_string(const std::string& key, const std::string& def) con
 int Core::get_int (const std::string& key, int def) const{
     auto it= get_string(key);
     if(it.empty()) return def;
-    return std::stoi(it);
+    try { return std::stoi(it); }
+    catch (...) { return def; }
 }
 bool Core::get_bool (const std::string& key, bool def) const{
     auto it= get_string(key);

@@ -28,9 +28,9 @@ Bitmaps::Bitmaps() {
 }
 
 void Bitmaps::destroy_bitmaps() {
-    al_destroy_bitmap(covered);
-    al_destroy_bitmap(uncovered);
-    al_destroy_bitmap(flag);
-    al_destroy_bitmap(mine);
-    for (auto* bmp : bmpNumber) al_destroy_bitmap(bmp);
+    al_destroy_bitmap(covered);   covered   = nullptr;
+    al_destroy_bitmap(uncovered); uncovered = nullptr;
+    al_destroy_bitmap(flag);      flag      = nullptr;
+    al_destroy_bitmap(mine);      mine      = nullptr;
+    for (auto*& bmp : bmpNumber) { al_destroy_bitmap(bmp); bmp = nullptr; }
 }

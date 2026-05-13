@@ -19,7 +19,7 @@ bool Graphic_Manager::is_reset_click(int x, int y) const {
 
 // Draws a 3-digit number at 2x font scale. screen_x is the anchor pixel; align is ALLEGRO_ALIGN_*.
 void Graphic_Manager::draw_lcd_number(int n, float screen_x, int align) {
-    if (n < 0)   n = 0;
+    if (n < -99) n = -99;
     if (n > 999) n = 999;
 
     ALLEGRO_TRANSFORM saved, scaled;
@@ -29,7 +29,10 @@ void Graphic_Manager::draw_lcd_number(int n, float screen_x, int align) {
     al_use_transform(&scaled);
 
     // Vertically center 16px text in 40px toolbar: top = (40-16)/2 = 12 → 6 in scaled space
-    al_draw_textf(font, al_map_rgb(220, 50, 50), screen_x / 2.0f, 6.0f, align, "%03d", n);
+    // %03d handles negatives: -1 → "-01" (sign + 2 digits), positives zero-padded to 3
+    const char* fmt = (n < 0) ? "-%02d" : "%03d";
+    int val = (n < 0) ? -n : n;
+    al_draw_textf(font, al_map_rgb(220, 50, 50), screen_x / 2.0f, 6.0f, align, fmt, val);
 
     al_use_transform(&saved);
 }
