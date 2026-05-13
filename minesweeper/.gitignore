@@ -6,3 +6,5 @@ settings.txt
 *.swp
 .vscode/
 .idea/
+CLAUDE.md
+.claude/
