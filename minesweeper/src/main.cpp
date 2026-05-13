@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "core.hpp"
 #include "map.hpp"
 #include "bitmaps.hpp"
@@ -16,12 +17,12 @@ int main() {
     Bitmaps tiles;
     if (!tiles.check_bitmaps()) return -1;
 
-    int cell_size = tiles.get_bitmap_size();
+    int cell_size = 0; // set by start_game() based on screen resolution
 
-    Graphic_Manager gfx(cell_size);
+    Graphic_Manager gfx(tiles.get_bitmap_size());
     Input input(gfx.get_display());
 
-    ALLEGRO_TIMER* timer = al_create_timer(1.0);
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 20.0); // 20 Hz for smooth ms display
     al_register_event_source(input.get_queue(), al_get_timer_event_source(timer));
 
     enum Phase { MENU, PLAYING } phase = MENU;
@@ -32,12 +33,13 @@ int main() {
     bool running     = true;
     bool game_over   = false;
     bool won         = false;
-    bool first_click = true;
-    int  elapsed     = 0;
+    bool   first_click = true;
+    int    elapsed_ms  = 0;
+    double start_time  = 0.0;
 
     auto do_render = [&]() {
         gfx.render(map, tiles, game_over, won,
-                   num_mines - map.count_flags(), elapsed);
+                   num_mines - map.count_flags(), elapsed_ms);
     };
 
     auto do_reset = [&]() {
@@ -46,13 +48,15 @@ int main() {
         game_over   = false;
         won         = false;
         first_click = true;
-        elapsed     = 0;
+        elapsed_ms  = 0;
+        start_time  = 0.0;
         do_render();
     };
 
     auto go_to_menu = [&]() {
         al_stop_timer(timer);
-        elapsed     = 0;
+        elapsed_ms  = 0;
+        start_time  = 0.0;
         game_over   = false;
         won         = false;
         first_click = true;
@@ -66,11 +70,13 @@ int main() {
         grid_height = PRESETS[preset].gh;
         num_mines   = PRESETS[preset].mines;
         gfx.start_game(grid_width, grid_height);
+        cell_size   = gfx.get_cell_size();
         map         = Map(grid_width, grid_height);
         game_over   = false;
         won         = false;
         first_click = true;
-        elapsed     = 0;
+        elapsed_ms  = 0;
+        start_time  = 0.0;
         al_stop_timer(timer);
         phase = PLAYING;
         do_render();
@@ -89,8 +95,8 @@ int main() {
             break;
 
         case ALLEGRO_EVENT_TIMER:
-            if (phase == PLAYING && !game_over && !won) {
-                if (elapsed < 999) elapsed++;
+            if (phase == PLAYING && !game_over && !won && !first_click) {
+                elapsed_ms = std::min((int)((al_get_time() - start_time) * 1000), 999999);
                 do_render();
             }
             break;
@@ -128,7 +134,8 @@ int main() {
                 if (first_click) {
                     map.generateMap(num_mines, cx, cy);
                     first_click = false;
-                    elapsed = 0;
+                    start_time  = al_get_time();
+                    elapsed_ms  = 0;
                     al_start_timer(timer);
                 }
 
@@ -139,10 +146,12 @@ int main() {
                     hit = map.reveal(cx, cy);
 
                 if (hit) {
+                    elapsed_ms = std::min((int)((al_get_time() - start_time) * 1000), 999999);
                     map.reveal_all_mines();
                     game_over = true;
                     al_stop_timer(timer);
                 } else if (map.check_win()) {
+                    elapsed_ms = std::min((int)((al_get_time() - start_time) * 1000), 999999);
                     won = true;
                     al_stop_timer(timer);
                 }

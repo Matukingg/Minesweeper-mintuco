@@ -11,19 +11,23 @@ class Graphic_Manager {
 
     ALLEGRO_DISPLAY* display;
     ALLEGRO_FONT*    font;
-    int cell_size;
-    int grid_w = 0, grid_h = 0;
+    int bmp_size;          // native bitmap pixel size (64)
+    int cell_size = 0;     // actual rendered cell size (may shrink for large grids)
+    int grid_w    = 0;
+    int grid_h    = 0;
 
-    void render_toolbar(bool game_over, bool won, int mines_remaining, int elapsed_secs);
+    void render_toolbar(bool game_over, bool won, int mines_remaining, int elapsed_ms);
     void draw_lcd_number(int n, float screen_x, int align);
+    void draw_lcd_timer(int ms, float screen_x, int align);
     void draw_scaled_text(const char* text, float screen_x, float screen_y,
                           int align, ALLEGRO_COLOR color, float scale);
 public:
-    explicit Graphic_Manager(int cell_size);
+    explicit Graphic_Manager(int bmp_size);
     ~Graphic_Manager();
 
     ALLEGRO_DISPLAY* get_display()        const { return display; }
     int              get_toolbar_height() const { return TOOLBAR_H; }
+    int              get_cell_size()      const { return cell_size; }
 
     void start_game(int gw, int gh);
     void show_menu();
@@ -35,5 +39,5 @@ public:
     void render_menu();
     void render(const Map& map, const Bitmaps& bitmaps,
                 bool game_over, bool won,
-                int mines_remaining, int elapsed_secs);
+                int mines_remaining, int elapsed_ms);
 };

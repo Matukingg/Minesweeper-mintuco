@@ -1,5 +1,6 @@
 #include "graphicMgr.hpp"
 #include <allegro5/allegro_primitives.h>
+#include <algorithm>
 
 static const struct { const char* name; const char* sub; int gw, gh, mines; }
 PRESETS[3] = {
@@ -13,7 +14,7 @@ static constexpr int BTN_Y0 = 65, BTN_GAP = 65;
 
 // ── construction ─────────────────────────────────────────────────────────────
 
-Graphic_Manager::Graphic_Manager(int cs) : cell_size(cs) {
+Graphic_Manager::Graphic_Manager(int bs) : bmp_size(bs) {
     display = al_create_display(MENU_W, MENU_H);
     font    = al_create_builtin_font();
 }
@@ -28,11 +29,23 @@ Graphic_Manager::~Graphic_Manager() {
 void Graphic_Manager::start_game(int gw, int gh) {
     grid_w = gw;
     grid_h = gh;
+
+    // Fit the grid to the monitor, leaving ~80px for OS chrome + toolbar
+    ALLEGRO_MONITOR_INFO info;
+    al_get_monitor_info(0, &info);
+    int screen_w = info.x2 - info.x1;
+    int screen_h = info.y2 - info.y1;
+
+    int cs = std::min({bmp_size,
+                       screen_w / gw,
+                       (screen_h - 80 - TOOLBAR_H) / gh});
+    cell_size = std::max(cs, 8);
+
     al_resize_display(display, gw * cell_size, gh * cell_size + TOOLBAR_H);
 }
 
 void Graphic_Manager::show_menu() {
-    grid_w = 0; grid_h = 0;
+    grid_w = 0; grid_h = 0; cell_size = 0;
     al_resize_display(display, MENU_W, MENU_H);
 }
 
@@ -67,6 +80,23 @@ void Graphic_Manager::draw_scaled_text(const char* text, float sx, float sy,
     al_scale_transform(&t, scale, scale);
     al_use_transform(&t);
     al_draw_text(font, color, sx / scale, sy / scale, align, text);
+    al_use_transform(&saved);
+}
+
+void Graphic_Manager::draw_lcd_timer(int ms, float screen_x, int align) {
+    int secs   = ms / 1000;
+    int millis = ms % 1000;
+    if (secs > 999) { secs = 999; millis = 999; }
+
+    ALLEGRO_TRANSFORM saved, scaled;
+    al_copy_transform(&saved, al_get_current_transform());
+    al_identity_transform(&scaled);
+    al_scale_transform(&scaled, 2.0f, 2.0f);
+    al_use_transform(&scaled);
+
+    al_draw_textf(font, al_map_rgb(220, 50, 50),
+                  screen_x / 2.0f, 6.0f, align, "%03d.%03d", secs, millis);
+
     al_use_transform(&saved);
 }
 
@@ -118,7 +148,7 @@ void Graphic_Manager::render_menu() {
 // ── toolbar ───────────────────────────────────────────────────────────────────
 
 void Graphic_Manager::render_toolbar(bool game_over, bool won,
-                                      int mines_remaining, int elapsed_secs) {
+                                      int mines_remaining, int elapsed_ms) {
     int sw = grid_w * cell_size;
 
     al_draw_filled_rectangle(0, 0, sw, TOOLBAR_H, al_map_rgb(192, 192, 192));
@@ -133,7 +163,7 @@ void Graphic_Manager::render_toolbar(bool game_over, bool won,
     draw_lcd_number(mines_remaining, 45.0f, ALLEGRO_ALIGN_LEFT);
 
     // Timer — right side
-    draw_lcd_number(elapsed_secs, sw - 8.0f, ALLEGRO_ALIGN_RIGHT);
+    draw_lcd_timer(elapsed_ms, sw - 8.0f, ALLEGRO_ALIGN_RIGHT);
 
     // Reset (face) button — center
     int bx = sw / 2 - 15;
@@ -147,11 +177,11 @@ void Graphic_Manager::render_toolbar(bool game_over, bool won,
 
 void Graphic_Manager::render(const Map& map, const Bitmaps& bitmaps,
                               bool game_over, bool won,
-                              int mines_remaining, int elapsed_secs) {
+                              int mines_remaining, int elapsed_ms) {
     al_set_target_backbuffer(display);
     al_clear_to_color(al_map_rgb(0, 0, 0));
 
-    render_toolbar(game_over, won, mines_remaining, elapsed_secs);
+    render_toolbar(game_over, won, mines_remaining, elapsed_ms);
 
     for (int y = 0; y < map.get_height(); y++) {
         for (int x = 0; x < map.get_width(); x++) {
@@ -166,7 +196,10 @@ void Graphic_Manager::render(const Map& map, const Bitmaps& bitmaps,
                 else if (val ==  0) bmp = bitmaps.get_uncovered();
                 else                bmp = bitmaps.get_number(val - 1);
             }
-            al_draw_bitmap(bmp, x * cell_size, y * cell_size + TOOLBAR_H, 0);
+            al_draw_scaled_bitmap(bmp,
+                0, 0, bmp_size, bmp_size,
+                x * cell_size, y * cell_size + TOOLBAR_H,
+                cell_size, cell_size, 0);
         }
     }
 
