@@ -1,0 +1,5 @@
+difficulty=normal
+num_mines=15
+grid_height=10
+grid_width=10
+fullscreen=0
