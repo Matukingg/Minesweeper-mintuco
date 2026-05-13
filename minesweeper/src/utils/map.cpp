@@ -114,18 +114,17 @@ void Map::reveal_all_mines() {
 }
 
 bool Map::check_win() const {
-    // Win condition 1: all non-mine cells revealed
-    bool all_revealed = true;
-    for (int y = 0; y < height && all_revealed; y++)
-        for (int x = 0; x < width && all_revealed; x++)
-            if (mapData[y][x] != -1 && !revealed[y][x]) all_revealed = false;
-    if (all_revealed) return true;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            if (mapData[y][x] != -1 && !revealed[y][x]) return false;
+    return true;
+}
 
-    // Win condition 2: every mine flagged and no wrong flags
+bool Map::check_flags_win() const {
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++) {
-            if (mapData[y][x] == -1 && !flagged[y][x]) return false; // mine not flagged
-            if (mapData[y][x] != -1 &&  flagged[y][x]) return false; // wrong flag
+            if (mapData[y][x] == -1 && !flagged[y][x]) return false;
+            if (mapData[y][x] != -1 &&  flagged[y][x]) return false;
         }
     return true;
 }

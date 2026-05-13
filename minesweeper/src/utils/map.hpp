@@ -19,11 +19,12 @@ public:
     void reset();         // clears to blank state; call generateMap separately on first click
     int  count_flags() const;
 
-    bool reveal(int x, int y);   // returns true if a mine was hit
-    bool chord(int x, int y);    // returns true if a mine was hit
+    bool reveal(int x, int y);      // returns true if a mine was hit
+    bool chord(int x, int y);       // returns true if a mine was hit
     void toggle_flag(int x, int y);
     void reveal_all_mines();
-    bool check_win() const;
+    bool check_win() const;         // all non-mine cells revealed
+    bool check_flags_win() const;   // all mines flagged, no wrong flags
 
     inline int  get_width()  const { return width; }
     inline int  get_height() const { return height; }

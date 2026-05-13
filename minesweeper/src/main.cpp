@@ -280,8 +280,8 @@ int main() {
                 }
             } else if (ev.mouse.button == 2) {
                 map.toggle_flag(cx, cy);
-                // Check win after flagging (all-mines-flagged condition)
-                if (!first_click && map.check_win()) {
+                // Flag-based win: only triggered by right-click
+                if (!first_click && map.check_flags_win()) {
                     elapsed_ms = std::min((int)((al_get_time()-start_time)*1000), 999999);
                     won = true;
                     al_stop_timer(timer);
