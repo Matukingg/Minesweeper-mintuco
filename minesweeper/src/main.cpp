@@ -4,32 +4,30 @@
 #include "graphicMgr.hpp"
 #include "input.hpp"
 
+static const struct { int gw, gh, mines; } PRESETS[3] = {
+    { 9,  9, 10},
+    {16, 16, 40},
+    {30, 16, 99},
+};
+
 int main() {
-    Core& config = Core::instance();
-    if (!config.load_settings()) {
-        config.set_int("grid_width",  10);
-        config.set_int("grid_height", 10);
-        config.set_int("num_mines",   15);
-        config.set_bool("fullscreen", false);
-        config.save_settings();
-    }
+    Core::instance(); // initialize Allegro
 
     Bitmaps tiles;
     if (!tiles.check_bitmaps()) return -1;
 
-    int grid_width  = config.get_int("grid_width");
-    int grid_height = config.get_int("grid_height");
-    int num_mines   = config.get_int("num_mines");
-    int cell_size   = tiles.get_bitmap_size();
+    int cell_size = tiles.get_bitmap_size();
 
-    Map map(grid_width, grid_height);
-
-    Graphic_Manager gfx(grid_width, grid_height, cell_size);
+    Graphic_Manager gfx(cell_size);
     Input input(gfx.get_display());
 
-    // 1-second timer for the elapsed display
     ALLEGRO_TIMER* timer = al_create_timer(1.0);
     al_register_event_source(input.get_queue(), al_get_timer_event_source(timer));
+
+    enum Phase { MENU, PLAYING } phase = MENU;
+
+    int grid_width = 0, grid_height = 0, num_mines = 0;
+    Map map(1, 1); // placeholder until difficulty is chosen
 
     bool running     = true;
     bool game_over   = false;
@@ -52,70 +50,112 @@ int main() {
         do_render();
     };
 
-    do_render();
+    auto go_to_menu = [&]() {
+        al_stop_timer(timer);
+        elapsed     = 0;
+        game_over   = false;
+        won         = false;
+        first_click = true;
+        phase       = MENU;
+        gfx.show_menu();
+        gfx.render_menu();
+    };
+
+    auto start_game = [&](int preset) {
+        grid_width  = PRESETS[preset].gw;
+        grid_height = PRESETS[preset].gh;
+        num_mines   = PRESETS[preset].mines;
+        gfx.start_game(grid_width, grid_height);
+        map         = Map(grid_width, grid_height);
+        game_over   = false;
+        won         = false;
+        first_click = true;
+        elapsed     = 0;
+        al_stop_timer(timer);
+        phase = PLAYING;
+        do_render();
+    };
+
+    gfx.render_menu();
 
     while (running) {
         ALLEGRO_EVENT ev;
         al_wait_for_event(input.get_queue(), &ev);
 
-        if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+        switch (ev.type) {
+
+        case ALLEGRO_EVENT_DISPLAY_CLOSE:
             running = false;
-            continue;
-        }
+            break;
 
-        if (ev.type == ALLEGRO_EVENT_TIMER) {
-            if (elapsed < 999) elapsed++;
+        case ALLEGRO_EVENT_TIMER:
+            if (phase == PLAYING && !game_over && !won) {
+                if (elapsed < 999) elapsed++;
+                do_render();
+            }
+            break;
+
+        case ALLEGRO_EVENT_MOUSE_BUTTON_UP: {
+            int mx = ev.mouse.x, my = ev.mouse.y;
+
+            if (phase == MENU) {
+                if (ev.mouse.button == 1) {
+                    int d = gfx.menu_click(mx, my);
+                    if (d >= 0) start_game(d);
+                }
+                break;
+            }
+
+            // PLAYING phase
+            if (ev.mouse.button == 1 && gfx.is_menu_click(mx, my)) {
+                go_to_menu();
+                break;
+            }
+            if (ev.mouse.button == 1 && gfx.is_reset_click(mx, my)) {
+                do_reset();
+                break;
+            }
+
+            if (game_over || won) break;
+
+            int toolbar_h = gfx.get_toolbar_height();
+            if (my < toolbar_h) break;
+
+            int cx = mx / cell_size;
+            int cy = (my - toolbar_h) / cell_size;
+
+            if (ev.mouse.button == 1) {
+                if (first_click) {
+                    map.generateMap(num_mines, cx, cy);
+                    first_click = false;
+                    elapsed = 0;
+                    al_start_timer(timer);
+                }
+
+                bool hit;
+                if (map.is_revealed(cx, cy) && map.get_value(cx, cy) > 0)
+                    hit = map.chord(cx, cy);
+                else
+                    hit = map.reveal(cx, cy);
+
+                if (hit) {
+                    map.reveal_all_mines();
+                    game_over = true;
+                    al_stop_timer(timer);
+                } else if (map.check_win()) {
+                    won = true;
+                    al_stop_timer(timer);
+                }
+            } else if (ev.mouse.button == 2) {
+                map.toggle_flag(cx, cy);
+            }
+
             do_render();
-            continue;
+            break;
         }
 
-        if (ev.type != ALLEGRO_EVENT_MOUSE_BUTTON_UP) continue;
-
-        int mx = ev.mouse.x;
-        int my = ev.mouse.y;
-
-        // Reset button (always active)
-        if (ev.mouse.button == 1 && gfx.is_reset_click(mx, my)) {
-            do_reset();
-            continue;
+        default: break;
         }
-
-        if (game_over || won) continue;
-
-        int toolbar_h = gfx.get_toolbar_height();
-        if (my < toolbar_h) continue;
-
-        int cx = mx / cell_size;
-        int cy = (my - toolbar_h) / cell_size;
-
-        if (ev.mouse.button == 1) {
-            // Generate map on first click, guaranteed 0 at clicked cell
-            if (first_click) {
-                map.generateMap(num_mines, cx, cy);
-                first_click = false;
-                elapsed = 0;
-                al_start_timer(timer);
-            }
-
-            bool hit;
-            if (map.is_revealed(cx, cy) && map.get_value(cx, cy) > 0)
-                hit = map.chord(cx, cy);
-            else
-                hit = map.reveal(cx, cy);
-
-            if (hit) {
-                map.reveal_all_mines();
-                game_over = true;
-                al_stop_timer(timer);
-            } else if (map.check_win()) {
-                won = true;
-                al_stop_timer(timer);
-            }
-        } else if (ev.mouse.button == 2) {
-            map.toggle_flag(cx, cy);
-        }
-
-        do_render();
     }
 
     al_destroy_timer(timer);
