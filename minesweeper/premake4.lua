@@ -14,7 +14,8 @@ project "buscaminas"
       "src/graphics",
       "src/input",
       "src/tiles",
-      "src/utils"
+      "src/utils",
+      "src/leaderboard"
    }
    
    links{

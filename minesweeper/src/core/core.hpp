@@ -37,9 +37,14 @@ public:
             std::cerr << "Failed to initialize font addon." << std::endl;
             std::exit(EXIT_FAILURE);
         }
+        if (!al_install_keyboard()) {
+            std::cerr << "Failed to install keyboard." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
     };
 
     ~Core() {
+        al_uninstall_keyboard();
         al_shutdown_font_addon();
         al_uninstall_mouse();
         al_shutdown_image_addon();
