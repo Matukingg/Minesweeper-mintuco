@@ -5,6 +5,7 @@
 #include "map.hpp"
 #include "bitmaps.hpp"
 #include "leaderboard.hpp"
+#include "profile.hpp"
 
 class Graphic_Manager {
     static constexpr int TOOLBAR_H = 40;
@@ -14,6 +15,8 @@ class Graphic_Manager {
     static constexpr int LB_H      = 520;
     static constexpr int LB_TAB_H  = 45;
     static constexpr int LB_LIST_W = 310;
+    static constexpr int PROF_W    = 360;
+    static constexpr int PROF_H    = 300;
 
     ALLEGRO_DISPLAY* display;
     ALLEGRO_FONT*    font;
@@ -37,24 +40,31 @@ public:
     int              get_toolbar_height() const { return TOOLBAR_H; }
     int              get_cell_size()      const { return cell_size; }
 
-    // Display resize helpers
+    // Display resize
     void start_game(int gw, int gh);
     void show_menu();
     void show_leaderboard();
+    void show_profiles();
 
     // Hit testing — game toolbar
     bool is_reset_click(int x, int y) const;
     bool is_menu_click(int x, int y)  const;
 
-    // Hit testing — menu
-    int  menu_click(int x, int y) const; // 0-2=difficulty, 3=leaderboard, -1=none
+    // Hit testing — menu (0-2=difficulty, 3=leaderboard, 4=profiles, -1=none)
+    int  menu_click(int x, int y) const;
 
     // Hit testing — leaderboard
-    int  lb_tab_click(int x, int y)  const; // 0-2=difficulty, -1=none
+    int  lb_tab_click(int x, int y)  const;
     bool lb_back_click(int x, int y) const;
 
+    // Hit testing — profiles
+    bool prof_back_click(int x, int y)   const;
+    int  prof_select_click(int x, int y, int count) const; // profile index or -1
+    int  prof_delete_click(int x, int y, int count) const; // profile index or -1
+    bool prof_add_click(int x, int y)    const;
+
     // Rendering
-    void render_menu();
+    void render_menu(const ProfileManager& pm);
     void render(const Map& map, const Bitmaps& bitmaps,
                 bool game_over, bool won,
                 int mines_remaining, int elapsed_ms,
@@ -63,4 +73,5 @@ public:
                            int mines_remaining, int elapsed_ms,
                            const std::string& input);
     void render_leaderboard(const Leaderboard& lb, int difficulty);
+    void render_profiles(const ProfileManager& pm, const std::string& new_input);
 };
