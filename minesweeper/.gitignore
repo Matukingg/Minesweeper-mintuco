@@ -1,0 +1,8 @@
+build/
+run
+settings.txt
+*.o
+*.a
+*.swp
+.vscode/
+.idea/
