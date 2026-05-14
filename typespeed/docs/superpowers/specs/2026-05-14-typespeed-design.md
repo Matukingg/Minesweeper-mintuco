@@ -20,6 +20,7 @@ src/
   game/             — round state machine, character tracking, error logic, timer
   textbank/         — file scanning, paragraph/file loading, progress tracking
   stats/            — WPM calculation, accuracy, error count, history file, graph data
+  globalstats/      — per-key timing log, bigram analysis, heatmap data, badge logic
 data/
   english/          — prose .txt files
   spanish/          — prose .txt files
@@ -30,6 +31,7 @@ data/
   javascript/       — code .txt files
   progress.txt      — paragraph index tracker (gitignored)
   history.txt       — per-category session history for graphs (gitignored)
+  keylog.txt        — per-keypress timing and error log for heatmap (gitignored)
 ```
 
 `main.cpp` owns the `ALLEGRO_TIMER` and the top-level phase enum. All other state lives in the relevant module.
@@ -40,16 +42,18 @@ data/
 
 ```
 MENU → CATEGORY → FILE_PICK → PREVIEW → PLAYING → RESULTS → (MENU or PLAYING again)
+MENU → GLOBAL_STATS
 ```
 
 | Phase | Description |
 |---|---|
-| MENU | Pick mode: Paragraph, Time limit, Word count, Endless |
+| MENU | Pick mode: Paragraph, Time limit, Word count, Endless. Button to open Global Stats. |
 | CATEGORY | Pick category: English, Spanish, Python, C++, LaTeX, HTML, JavaScript |
 | FILE_PICK | List of .txt files in the chosen category folder; shows file name |
 | PREVIEW | Shows file name, paragraph/block number (prose) or full file info (code), word count, line count — confirm or go back |
 | PLAYING | Main typing screen |
 | RESULTS | WPM, accuracy %, error count, moment-to-moment WPM graph |
+| GLOBAL_STATS | Full stats dashboard: keyboard heatmap, bigrams, trends, badges, lifetime totals |
 
 ---
 
@@ -129,12 +133,59 @@ Shown after every round (including endless):
 
 | Stat | Description |
 |---|---|
-| WPM | (correctly typed words / elapsed minutes) |
+| WPM | correctly typed characters / 5 / elapsed minutes (consistent across prose and code) |
 | Accuracy % | correct keystrokes / total keystrokes |
 | Error count | total mistyped characters |
 | WPM graph | moment-to-moment WPM sampled every ~5 seconds; time axis scales to round length |
 
 Session results are appended to `data/history.txt` for the per-category historical graph (same style as minesweeper leaderboard graph).
+
+---
+
+## Global Stats Screen
+
+Accessible from the main menu at any time. Pulls from `data/history.txt` and `data/keylog.txt` (per-keypress timing log, gitignored). Keyboard layout rendered matches the system layout: **Latin American Spanish, deadtilde variant** (pc105).
+
+### Keyboard Heatmap
+- Full on-screen LATAM keyboard showing every key with its correct symbol
+- Key colour by **average press time** — cool (blue/green) = fast, warm (red) = slow
+- Separate view: key colour by **error rate** — how often each key is mistyped
+- Slowest 10 keys ranked list alongside the heatmap
+- Most mistyped keys ranked list (separate from speed)
+
+### Bigram Analysis
+- Heatmap or ranked list of two-key sequences (bigrams) that slow you down most
+- Covers both prose bigrams (`th`, `en`, `qu`) and code bigrams (`->`, `::`, `{;`, `*/`)
+
+### Progress Over Time
+- WPM trend graph across all sessions — full history, improvement curve
+- Accuracy trend — getting cleaner or just faster?
+- Sessions per day heatmap (GitHub-style contribution graph)
+- Personal bests per category (English, Spanish, Python, C++, LaTeX, HTML, JavaScript)
+
+### Consistency
+- WPM standard deviation — how consistent vs variable your speed is
+- "Flow state" — longest streak within a session where WPM stayed above personal average
+- Best hour of day — when you type fastest, derived from session timestamps
+
+### Per-Category Breakdown
+- Average WPM per category — prose vs code comparison
+- Per-language WPM: English vs Spanish, Python vs C++ vs LaTeX vs HTML vs JS
+- Symbol key stats — performance on `{`, `}`, `(`, `;`, `->`, `::` vs alphabetic keys
+- Punctuation accuracy — commas, periods, `¿`, `¡`, accented characters (`á`, `é`, `í`, `ó`, `ú`, `ñ`)
+- Average session length per category
+
+### Lifetime Totals
+- Total words typed (all time)
+- Total time practiced (all time)
+- Most practiced file — which book or snippet you return to most
+
+### Motivational
+- Longest streak — most consecutive days with at least one session
+- "Nemesis key" — the single key that has cost the most total time across all sessions
+- WPM goal tracker — set a target WPM, progress bar toward it per category
+- "Next milestone" — e.g. "3 more sessions to beat your Spanish record"
+- Category mastery badges — unlocked at WPM thresholds per category (Bronze / Silver / Gold)
 
 ---
 
@@ -164,4 +215,4 @@ Mirrors minesweeper exactly:
 - Core is a singleton (`Core::instance()`). Do not construct on the stack.
 - Event-driven loop — no fixed timestep. Redraws only on keyboard events or timer ticks.
 - Tile/font paths should be relative to the executable, not hardcoded absolute paths (lesson from minesweeper).
-- `data/progress.txt` and `data/history.txt` are gitignored — user-specific runtime state.
+- `data/progress.txt`, `data/history.txt`, and `data/keylog.txt` are gitignored — user-specific runtime state.
